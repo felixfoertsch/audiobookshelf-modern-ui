@@ -80,6 +80,38 @@ it('allows queries, rejects traversal and external paths before fetching', async
 	expect(fetcher).toHaveBeenCalledTimes(1)
 })
 
+it('bounds recent feed requests separately and preserves caller abort', async () => {
+	const timeout = vi
+		.spyOn(AbortSignal, 'timeout')
+		.mockImplementation(() => new AbortController().signal)
+	vi.spyOn(globalThis, 'fetch').mockImplementation(
+		async () => new Response('{}'),
+	)
+	for (const path of [
+		'/api/test',
+		'/api/libraries/lib/recent-episodes?includeFeed=1',
+		'/api/libraries/lib/recent-episodes/other',
+	])
+		await psbApi(path, z.unknown())
+	expect(timeout.mock.calls.map(([ms]) => ms)).toEqual([5000, 35000, 5000])
+	vi.spyOn(globalThis, 'fetch').mockImplementation(
+		(_input, init) =>
+			new Promise((_resolve, reject) => {
+				init?.signal?.addEventListener('abort', () =>
+					reject(init.signal?.reason),
+				)
+			}),
+	)
+	const controller = new AbortController()
+	const rejected = expect(
+		psbApi('/api/libraries/lib/recent-episodes', z.unknown(), {
+			signal: controller.signal,
+		}),
+	).rejects.toMatchObject({ name: 'AbortError' })
+	controller.abort()
+	await rejected
+})
+
 it('surfaces sidecar unavailable without logging out', async () => {
 	localStorage.setItem('token', 'native-token')
 	useAuth

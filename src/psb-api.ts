@@ -18,7 +18,11 @@ export async function psbApi<T>(
 	)
 		throw new Error('Sidecar API path must be same-origin')
 	const generation = getAuthGeneration()
-	const timeout = AbortSignal.timeout(5000)
+	const timeout = AbortSignal.timeout(
+		/^\/api\/libraries\/[^/]+\/recent-episodes$/.test(url.pathname)
+			? 35000
+			: 5000,
+	)
 	const send = () => {
 		const headers = new Headers(init.headers)
 		new Headers(authHeaders()).forEach((value, key) => {
