@@ -29,15 +29,24 @@ const bookmarks: {
 	title: string
 	createdAt: number
 }[] = []
+const fixtureAccessTokens = Object.fromEntries(
+	['listener', 'admin', 'root', 'guest'].map((username) => [
+		username,
+		`fixture-${username === 'listener' ? '' : `${username}-`}access`,
+	]),
+)
+const fixtureToken = (username: string) =>
+	`fixture.${Buffer.from(
+		JSON.stringify({ type: 'access', sub: `fixture-${username}` }),
+	).toString('base64url')}.signature`
+
 export const fixtureUsers = ['listener', 'admin', 'root', 'guest'].map(
 	(username) => ({
 		id: `fixture-${username}`,
 		username,
 		type: username === 'listener' ? 'user' : username,
-		accessToken:
-			username === 'listener' ? 'fixture-access' : `fixture-${username}-access`,
-		token:
-			username === 'listener' ? 'fixture-access' : `fixture-${username}-access`,
+		accessToken: fixtureToken(username),
+		token: fixtureToken(username),
 		email: null,
 		isActive: true,
 		isLocked: false,
@@ -67,6 +76,13 @@ export const fixtureUsers = ['listener', 'admin', 'root', 'guest'].map(
 		hasOpenIDLink: false,
 	}),
 )
+export function fixtureUserForToken(token: unknown) {
+	return fixtureUsers.find(
+		(user) =>
+			user.accessToken === token ||
+			fixtureAccessTokens[user.username] === token,
+	)
+}
 export const fixturePasswords = new Map(
 	fixtureUsers.map((user) => [user.id, 'password']),
 )

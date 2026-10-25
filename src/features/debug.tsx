@@ -1,147 +1,45 @@
-import { Link } from '@tanstack/react-router'
-import {
-	configureDebug,
-	DebugDashboard,
-	DebugOverlay,
-	disableDebug,
-	useDebugEnabled,
-} from 'debug-overlay/client'
-import { useEffect, useId, useState } from 'react'
-import { z } from 'zod'
+import { Link, useRouterState } from '@tanstack/react-router'
+import { Debug, DebugToggle, disableDebug } from 'debug-overlay/client'
+import { type ReactNode, useEffect } from 'react'
 import { useAuth } from '../api'
-import { usePlayer } from '../player'
-import { psbApi } from '../psb-api'
-import { Button } from '../shared/components/ui/button'
-import { Switch } from '../shared/components/ui/switch'
 import 'debug-overlay/styles.css'
 
-const transport = (
-	path: string,
-	{ method, body }: { method?: string; body?: unknown },
-) =>
-	psbApi(`/api/debug${path}`, z.unknown(), {
-		method,
-		...(body === undefined ? {} : { body: JSON.stringify(body) }),
-	})
-const configure = (enabled: boolean) =>
-	configureDebug({ enabled, transport, storageKey: 'abs-modern-debug-unused' })
 const identity = () => {
 	const user = useAuth.getState().user
 	return user && ['admin', 'root'].includes(String(user.type))
 		? `${user.id}:${user.type}`
 		: ''
 }
-let owner = identity()
-configure(false)
-useAuth.subscribe(() => {
-	const next = identity()
-	if (next !== owner) {
-		owner = next
-		configure(false)
-	}
-})
-window.addEventListener('abs:logout-start', () => configure(false))
+const getToken = () => useAuth.getState().user?.accessToken ?? ''
 const modernBase = () =>
 	(window.__ABS_WEB_CONFIG__?.basePath || '').replace(/\/$/, '')
-const href = (path: string) => `${modernBase()}${path}`
-const renderLink = (mapped: string, label: string) => (
-	<Link to={mapped.slice(modernBase().length) || '/'}>{label}</Link>
+const renderLink = (path: string, label: string): ReactNode => (
+	<Link to={path}>{label}</Link>
 )
 
-function useDebugAvailable() {
+export function RootDebug({ children }: { children: ReactNode }) {
 	const user = useAuth((state) => state.user)
-	const owner =
-		user && ['admin', 'root'].includes(String(user.type))
-			? `${user.id}:${user.type}`
-			: ''
-	const [available, setAvailable] = useState('')
+	const routePath = useRouterState({
+		select: (state) => state.location.pathname,
+	})
 	useEffect(() => {
-		if (!owner) return
-		let active = true
-		void psbApi('/api/debug/auth', z.object({ ok: z.literal(true) }))
-			.then(() => {
-				if (active) setAvailable(owner)
-			})
-			.catch(() => {
-				if (active) {
-					setAvailable('')
-					configure(false)
-				}
-			})
-		return () => {
-			active = false
-		}
-	}, [owner])
-	return !!owner && available === owner
+		const logout = () => disableDebug()
+		window.addEventListener('abs:logout-start', logout)
+		return () => window.removeEventListener('abs:logout-start', logout)
+	}, [])
+	return (
+		<Debug
+			identity={identity()}
+			apiUrl={`${modernBase()}/debug-api`}
+			isAdmin={!!user && ['admin', 'root'].includes(String(user.type))}
+			getToken={getToken}
+			routePath={routePath}
+			renderLink={renderLink}
+			offsetTarget='[aria-label="Audio player"]'
+		>
+			{children}
+		</Debug>
+	)
 }
 
-export function DebugMenu() {
-	const id = useId()
-	const enabled = useDebugEnabled()
-	const available = useDebugAvailable()
-	if (!available) return null
-	return (
-		<label htmlFor={id} className="flex items-center gap-2 text-xs font-medium">
-			Debug
-			<Switch
-				id={id}
-				className="border-muted-foreground data-[state=unchecked]:bg-muted-foreground dark:data-[state=unchecked]:bg-muted-foreground"
-				aria-label="Debug"
-				title={enabled ? 'Debug on' : 'Debug off'}
-				checked={enabled}
-				onCheckedChange={(checked) =>
-					checked ? configure(!!identity()) : disableDebug()
-				}
-			/>
-		</label>
-	)
-}
-export function RouteDebugOverlay({ path }: { path: string }) {
-	const enabled = useDebugEnabled()
-	const user = useAuth((state) => state.user)
-	const playerVisible = usePlayer((state) => !!(state.session || state.error))
-	const allowed = !!user && ['admin', 'root'].includes(String(user.type))
-	useEffect(() => {
-		if (!enabled || !allowed || typeof ResizeObserver === 'undefined') return
-		const update = () => {
-			const player = document.querySelector('[aria-label="Audio player"]')
-			document.documentElement.style.setProperty(
-				'--debug-overlay-bottom',
-				`${playerVisible && player ? Math.max(0, window.innerHeight - player.getBoundingClientRect().top) : 0}px`,
-			)
-		}
-		const resize = new ResizeObserver(update)
-		const player = document.querySelector('[aria-label="Audio player"]')
-		if (player) resize.observe(player)
-		update()
-		return () => {
-			resize.disconnect()
-			document.documentElement.style.removeProperty('--debug-overlay-bottom')
-		}
-	}, [enabled, allowed, playerVisible])
-	return (
-		<DebugOverlay
-			key={path}
-			routePath={path}
-			dashboardHref={href('/debug/issues')}
-			renderDashboardLink={renderLink}
-		/>
-	)
-}
-export function DebugIssues() {
-	const enabled = useDebugEnabled()
-	const available = useDebugAvailable()
-	const user = useAuth((state) => state.user)
-	if (!user || !['admin', 'root'].includes(String(user.type)))
-		return <p role="alert">Permission denied.</p>
-	if (!available) return <p role="status">Debug sidecar unavailable.</p>
-	if (!enabled)
-		return (
-			<section className="space-y-4">
-				<h1 className="text-3xl font-semibold">Debug issues</h1>
-				<p className="text-muted-foreground">Debug is disabled.</p>
-				<Button onClick={() => configure(!!identity())}>Enable debug</Button>
-			</section>
-		)
-	return <DebugDashboard routeHref={href} renderLink={renderLink} />
-}
+export { DebugToggle }

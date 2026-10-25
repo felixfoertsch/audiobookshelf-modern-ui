@@ -1,7 +1,7 @@
 {
 	"name": "audiobookshelf-modern-ui",
 	"private": true,
-	"version": "2026.10.22.1",
+	"version": "2026.10.25",
 	"type": "module",
 	"packageManager": "bun@1.4.3",
 	"scripts": {
@@ -20,7 +20,7 @@
 		"@tanstack/react-router": "1.170.45",
 		"class-variance-authority": "0.7.1",
 		"clsx": "2.1.1",
-		"debug-overlay": "https://git.felixfoertsch.de/felixfoertsch/debug-overlay/releases/download/v2026.10.21.2/debug-overlay-2026.10.21.2.tgz",
+		"debug-overlay": "https://git.felixfoertsch.de/felixfoertsch/debug-overlay/releases/download/v2026.10.25.4/debug-overlay-2026.10.25.4.tgz",
 		"epubjs": "0.3.93",
 		"hls.js": "1.7.3",
 		"libarchive.js": "1.3.0",

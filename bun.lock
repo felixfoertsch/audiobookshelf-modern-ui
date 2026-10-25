@@ -11,7 +11,7 @@
         "@tanstack/react-router": "1.170.45",
         "class-variance-authority": "0.7.1",
         "clsx": "2.1.1",
-        "debug-overlay": "https://git.felixfoertsch.de/felixfoertsch/debug-overlay/releases/download/v2026.10.21.2/debug-overlay-2026.10.21.2.tgz",
+        "debug-overlay": "https://git.felixfoertsch.de/felixfoertsch/debug-overlay/releases/download/v2026.10.25.4/debug-overlay-2026.10.25.4.tgz",
         "epubjs": "0.3.93",
         "hls.js": "1.7.3",
         "libarchive.js": "1.3.0",
@@ -528,7 +528,7 @@
 
     "debug": ["debug@4.3.7", "", { "dependencies": { "ms": "^2.1.3" }, "peerDependencies": { "supports-color": "*" }, "optionalPeers": ["supports-color"] }, "sha512-Er2nc/H7RrMXZBFCEim6TCmMk02Z8vLC2Rbi1KEBggpo0fS6l0S1nnapwmIi3yW/+GOJap1Krg4w0Hg80oCqgQ=="],
 
-    "debug-overlay": ["debug-overlay@https://git.felixfoertsch.de/felixfoertsch/debug-overlay/releases/download/v2026.10.21.2/debug-overlay-2026.10.21.2.tgz", { "dependencies": { "@hono/node-server": "2.1.5" }, "peerDependencies": { "hono": ">=4", "react": ">=18" }, "optionalPeers": ["hono", "react"] }, "sha512-pyvaPhPz7/Si9A+Xb9RJf2Ws2i3VxanmRT2nj8kI/kxq04gocswsJXp02dIJtc6a5t5a62b8Wjilb9mpAu5czQ=="],
+    "debug-overlay": ["debug-overlay@https://git.felixfoertsch.de/felixfoertsch/debug-overlay/releases/download/v2026.10.25.4/debug-overlay-2026.10.25.4.tgz", { "dependencies": { "@hono/node-server": "2.1.5" }, "peerDependencies": { "hono": ">=4", "react": ">=18" }, "optionalPeers": ["hono", "react"] }, "sha512-rqVeoX8eP8qp7yE1mThJTJCEfY7k0LaGGzLD0GSjDNgsvhNTb4zTtd9fm7ygIKnJzv8hQ7U7OYAJkWAUyim/EQ=="],
 
     "decimal.js": ["decimal.js@10.6.0", "", {}, "sha512-YpgQiITW3JXGntzdUmyUR1V812Hn8T1YVXhCu+wO3OpS4eU9l4YdD3qjyiKdV6mvV29zapkMeD390UVEf2lkUg=="],
 

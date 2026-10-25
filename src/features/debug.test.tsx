@@ -1,149 +1,79 @@
-import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
-import { useDebugEnabled } from 'debug-overlay/client'
-import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { logout, useAuth } from '../api'
-import {
-	DropdownMenu,
-	DropdownMenuContent,
-	DropdownMenuTrigger,
-} from '../shared/components/ui/dropdown-menu'
-import { DebugIssues, DebugMenu } from './debug'
+import { act, cleanup, render } from '@testing-library/react'
+import React from 'react'
+import { afterEach, expect, it, vi } from 'vitest'
+import { useAuth } from '../api'
+import { RootDebug } from './debug'
 
-function Probe() {
-	return (
-		<>
-			<DropdownMenu open>
-				<DropdownMenuTrigger>Menu</DropdownMenuTrigger>
-				<DropdownMenuContent>
-					<DebugMenu />
-				</DropdownMenuContent>
-			</DropdownMenu>
-			<output>{String(useDebugEnabled())}</output>
-		</>
-	)
-}
-beforeEach(() =>
-	vi.stubGlobal(
-		'fetch',
-		vi.fn(async () => Response.json({ ok: true })),
-	),
-)
+const debug = vi.hoisted(() => ({
+	props: undefined as
+		| (Record<string, unknown> & { children: React.ReactNode })
+		| undefined,
+	mounts: 0,
+	disable: vi.fn(),
+}))
+vi.mock('@tanstack/react-router', () => ({
+	Link: ({ children }: { children: React.ReactNode }) => children,
+	useRouterState: () => '/',
+}))
+vi.mock('debug-overlay/client', () => ({
+	Debug: (props: typeof debug.props) => {
+		debug.props = props
+		React.useEffect(() => {
+			debug.mounts++
+		}, [])
+		return <>{props?.children}</>
+	},
+
+	DebugToggle: () => null,
+	disableDebug: debug.disable,
+}))
+
+const admin = (id = 'admin') =>
+	useAuth.getState().set({
+		id,
+		username: id,
+		accessToken: 'secret-token',
+		type: 'admin',
+	})
 afterEach(() => {
-	vi.unstubAllGlobals()
 	cleanup()
 	act(() => useAuth.getState().set(null))
+	debug.props = undefined
+	debug.mounts = 0
+	debug.disable.mockClear()
 })
-it('gates ordinary users and resets immediately on identity, role and logout changes', async () => {
+
+it('passes admin identity and live token without remounting app on user change', () => {
+	const { rerender } = render(<RootDebug>App</RootDebug>)
+	act(() => admin())
+	rerender(<RootDebug>App</RootDebug>)
+	expect(debug.props).toMatchObject({
+		apiUrl: '/debug-api',
+		isAdmin: true,
+		routePath: '/',
+		offsetTarget: '[aria-label="Audio player"]',
+	})
+	const getToken = debug.props?.getToken
+	if (typeof getToken !== 'function') throw new Error('missing token callback')
+	expect(getToken()).toBe('secret-token')
+	const mounts = debug.mounts
+	act(() => admin('second-admin'))
+	rerender(<RootDebug>App</RootDebug>)
+	expect(debug.props?.identity).toBe('second-admin:admin')
+	expect(debug.mounts).toBe(mounts)
+})
+
+it('does not enable admin integration for ordinary users and disables synchronously at logout start', () => {
 	act(() =>
 		useAuth.getState().set({
 			id: 'listener',
 			username: 'Listener',
-			accessToken: 'test',
+			accessToken: 'token',
 			type: 'user',
 		}),
 	)
-	render(<Probe />)
-	expect(screen.queryByRole('switch')).toBeNull()
-	expect(screen.getByText('false')).toBeTruthy()
-	act(() =>
-		useAuth.getState().set({
-			id: 'admin',
-			username: 'Admin',
-			accessToken: 'test',
-			type: 'admin',
-		}),
-	)
-	fireEvent.click(await screen.findByRole('switch'))
-	expect(screen.getByText('true')).toBeTruthy()
-	act(() =>
-		useAuth.getState().set({
-			id: 'admin',
-			username: 'Admin',
-			accessToken: 'refreshed',
-			type: 'admin',
-		}),
-	)
-	expect(screen.getByText('true')).toBeTruthy()
+	render(<RootDebug>App</RootDebug>)
+	expect(debug.props?.isAdmin).toBe(false)
 	act(() => window.dispatchEvent(new Event('abs:logout-start')))
-	expect(screen.getByText('false')).toBeTruthy()
-	fireEvent.click(await screen.findByRole('switch'))
-	act(() =>
-		useAuth
-			.getState()
-			.set({ id: 'root', username: 'Root', accessToken: 'test', type: 'root' }),
-	)
-	expect(screen.getByText('false')).toBeTruthy()
-	fireEvent.click(await screen.findByRole('switch'))
-	act(() =>
-		useAuth
-			.getState()
-			.set({ id: 'root', username: 'Root', accessToken: 'test', type: 'user' }),
-	)
-	expect(screen.getByText('false')).toBeTruthy()
-})
-
-it('hides debug switch when sidecar auth probe fails', async () => {
-	vi.stubGlobal(
-		'fetch',
-		vi.fn(async () => new Response('', { status: 503 })),
-	)
-	act(() =>
-		useAuth.getState().set({
-			id: 'admin',
-			username: 'Admin',
-			accessToken: 'test',
-			type: 'admin',
-		}),
-	)
-	render(
-		<>
-			<Probe />
-			<DebugIssues />
-		</>,
-	)
-	expect(await screen.findByText('Debug sidecar unavailable.')).toBeTruthy()
-	await act(async () => {
-		await Promise.resolve()
-	})
-	expect(screen.queryByRole('switch')).toBeNull()
-})
-
-it('fresh dashboard explains disabled state and direct logout disables before network completes', async () => {
-	act(() =>
-		useAuth.getState().set({
-			id: 'admin',
-			username: 'Admin',
-			accessToken: 'test',
-			type: 'admin',
-		}),
-	)
-	render(
-		<>
-			<Probe />
-			<DebugIssues />
-		</>,
-	)
-	expect(await screen.findByText('Debug is disabled.')).toBeTruthy()
-	fireEvent.click(await screen.findByRole('switch'))
-	let finish!: (response: Response) => void
-	vi.stubGlobal(
-		'fetch',
-		vi.fn(
-			() =>
-				new Promise<Response>((resolve) => {
-					finish = resolve
-				}),
-		),
-	)
-	let pending!: Promise<void>
-	act(() => {
-		pending = logout()
-	})
-	expect(screen.getByText('false')).toBeTruthy()
-	await act(async () => {
-		await Promise.resolve()
-		finish(Response.json({ redirect_url: null }))
-		await pending
-	})
-	vi.unstubAllGlobals()
+	expect(debug.disable).toHaveBeenCalledOnce()
 })

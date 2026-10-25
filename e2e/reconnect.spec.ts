@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test'
+import { fixtureUsers } from './fixture-api'
 import { signIn, socketControl } from './socket-controls'
 
 for (const prefix of [''])
@@ -31,7 +32,8 @@ for (const prefix of [''])
 			const revalidated = page.waitForRequest(
 				(request) =>
 					new URL(request.url()).pathname === `${prefix}/api/items/podcast-1` &&
-					request.headers().authorization === 'Bearer fixture-access',
+					request.headers().authorization ===
+						`Bearer ${fixtureUsers.find((user) => user.username === 'listener')?.accessToken}`,
 			)
 			await socketControl(page, prefix, { action: 'reconnect' })
 			await revalidated

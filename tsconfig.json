@@ -13,5 +13,5 @@
 		"paths": { "@/*": ["./src/*"] },
 		"ignoreDeprecations": "6.0"
 	},
-	"include": ["src", "vite.config.ts", "e2e", "playwright.config.ts"]
+	"include": ["src", "server", "vite.config.ts", "e2e", "playwright.config.ts"]
 }

@@ -3,6 +3,7 @@
 import { once } from 'node:events'
 import { createServer } from 'node:http'
 import { createRequire } from 'node:module'
+import { createDebugServer } from 'debug-overlay/server'
 import { z } from 'zod'
 import { items, libraries, playable } from './data'
 import {
@@ -12,6 +13,7 @@ import {
 	fixtureApi,
 	fixtureFeedEpisode,
 	fixturePasswords,
+	fixtureUserForToken,
 	fixtureUsers,
 	loginPayload,
 	onFixtureUserUpdated,
@@ -122,9 +124,44 @@ async function fileResponse(
 		{ status: 206, headers },
 	)
 }
+const debugServer = createDebugServer({
+	dbPath: ':memory:',
+	authorize: async (request) => {
+		const token = request.headers.get('authorization')?.replace(/^Bearer /, '')
+		const user = fixtureUserForToken(token)
+		if (!user || !['admin', 'root'].includes(user.type) || !user.isActive)
+			return false
+		try {
+			return (
+				JSON.parse(
+					Buffer.from(token?.split('.')[1] ?? '', 'base64url').toString(),
+				).type === 'access'
+			)
+		} catch {
+			return false
+		}
+	},
+	routes: async () => [
+		'/',
+		'/account',
+		'/config',
+		'/upload',
+		'/debug/issues',
+		...libraries.flatMap((library) =>
+			catalog
+				.filter((item) => item.libraryId === library.id)
+				.map((item) => `/item/${encodeURIComponent(item.id)}`),
+		),
+	],
+})
+
 async function handleRequest(request: Request) {
 	const url = new URL(request.url)
 	const path = url.pathname
+	if (path.startsWith('/debug-api/')) {
+		url.pathname = path.slice('/debug-api'.length) || '/'
+		return debugServer.fetch(new Request(url, request))
+	}
 	if (path.startsWith('/psb/')) {
 		url.pathname = path.slice(4)
 		return handleSidecarRequest(new Request(url, request))
@@ -210,7 +247,7 @@ async function handleRequest(request: Request) {
 	const token =
 		request.headers.get('authorization')?.replace(/^Bearer /, '') ||
 		url.searchParams.get('token')
-	const user = fixtureUsers.find((user) => user.accessToken === token)
+	const user = fixtureUserForToken(token)
 	if (path === '/__fixture/socket' && user) {
 		if (request.method === 'GET')
 			return json({
@@ -827,7 +864,7 @@ const socketServers = (SocketServer ? ['/socket.io'] : []).map((path) => {
 		socket.on('auth', (token: unknown) => {
 			if (authenticatedUserId) socket.leave(authenticatedUserId)
 			authenticatedUserId = undefined
-			const user = fixtureUsers.find((user) => user.accessToken === token)
+			const user = fixtureUserForToken(token)
 			if (!user) {
 				socket.leave('authenticated')
 				socket.emit('auth_failed', { message: 'Invalid token' })
@@ -871,6 +908,7 @@ server.listen(
 	process.env.FIXTURE_HOST || '127.0.0.1',
 )
 function shutdown() {
+	debugServer.close()
 	for (const io of socketServers) io.disconnectSockets(true)
 	server.close(() => {
 		process.exit(0)

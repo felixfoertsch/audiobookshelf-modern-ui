@@ -32,7 +32,7 @@ import {
 	SearchForm,
 } from '../features/catalog/browse'
 import { ServerActivityObserver } from '../features/catalog/server-activity'
-import { DebugMenu, RouteDebugOverlay } from '../features/debug'
+import { DebugToggle, RootDebug } from '../features/debug'
 import { PodcastSearchModal } from '../features/podcast/PodcastSearchModal'
 import { Player } from '../player'
 import { Button } from '../shared/components/ui/button'
@@ -226,207 +226,214 @@ export function Layout({
 			>
 				Skip to content
 			</a>
-			<SidebarProvider>
-				<Sidebar className="z-30 [&_[data-active=true]_svg]:text-sidebar-accent-foreground">
-					<SidebarHeader className="gap-4 px-4 pt-6 pb-2">
-						<Link to="/" className="px-2 text-lg font-semibold">
-							Audiobookshelf
-						</Link>
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button
-									variant="ghost"
-									size="sm"
-									className="w-full min-w-0 justify-between border border-muted-foreground bg-[var(--glass-tint)] text-sidebar-foreground shadow-sm backdrop-blur-xl"
-								>
-									<span className="truncate">
-										Library: {currentLibrary?.name || 'Choose library'}
-									</span>
-									<ChevronDown aria-hidden="true" className="size-4 shrink-0" />
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent
-								align="start"
-								className="max-w-[calc(100vw-2rem)]"
-							>
-								<DropdownMenuLabel>Library</DropdownMenuLabel>
-								<DropdownMenuRadioGroup
-									value={currentLibrary?.id || ''}
-									onValueChange={(id) => {
-										localStorage.setItem('currentLibraryId', id)
-										void navigate({
-											to: '/library/$library',
-											params: { library: id },
-										})
-									}}
-								>
-									{libraries.map((library) => (
-										<DropdownMenuRadioItem key={library.id} value={library.id}>
-											<span className="truncate">{library.name}</span>
-										</DropdownMenuRadioItem>
-									))}
-								</DropdownMenuRadioGroup>
-							</DropdownMenuContent>
-						</DropdownMenu>
-						{currentLibrary && (
-							<div className="relative [&_label]:text-[0px] [&_input]:h-8 [&_input]:pl-8 [&_input]:text-sm [&_button]:h-8 [&_button]:px-2 [&_button]:text-xs">
-								<Search
-									aria-hidden="true"
-									className="pointer-events-none absolute top-2 left-2.5 size-4 text-muted-foreground"
-								/>
-								<SearchForm
-									key={currentLibrary.id}
-									library={currentLibrary.id}
-									q={
-										/^\/library\/[^/]+\/search\/?$/.test(pathname) &&
-										typeof query.q === 'string'
-											? query.q
-											: ''
-									}
-								/>
-							</div>
-						)}
-					</SidebarHeader>
-					<SidebarContent className="[scrollbar-width:none] [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0">
-						{currentLibrary && (
-							<LibraryNav
-								library={currentLibrary.id}
-								podcast={currentLibrary.mediaType === 'podcast'}
-								icons={{
-									Home: <House />,
-									'Latest episodes': <Headphones />,
-									'Add podcast': <Plus />,
-									Library: <Library />,
-									series: <ListMusic />,
-									authors: <Users />,
-									collections: <Folder />,
-									Narrators: <Mic />,
-									Playlists: <ListMusic />,
-									'Download queue': <Download />,
-									Statistics: <ChartNoAxesColumn />,
-								}}
-							/>
-						)}
-						<nav
-							aria-label="Settings and tools"
-							className="mt-auto space-y-1 px-3 py-2 text-sm"
-						>
-							{(admin || permissions?.upload) && (
-								<Link
-									to="/upload"
-									className="flex items-center gap-2 rounded-md px-3 py-2 hover:bg-accent"
-								>
-									<Plus aria-hidden="true" className="size-4" />
-									Upload
-								</Link>
-							)}
-							{admin && (
-								<div className="flex items-center gap-2">
-									<Link
-										to="/config"
-										activeOptions={{ exact: false }}
-										activeProps={{ className: 'bg-accent font-medium' }}
-										className="flex flex-1 items-center gap-2 rounded-md px-3 py-2 hover:bg-accent"
+			<RootDebug>
+				<SidebarProvider>
+					<Sidebar className="z-30 [&_[data-active=true]_svg]:text-sidebar-accent-foreground">
+						<SidebarHeader className="gap-4 px-4 pt-6 pb-2">
+							<Link to="/" className="px-2 text-lg font-semibold">
+								Audiobookshelf
+							</Link>
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button
+										variant="ghost"
+										size="sm"
+										className="w-full min-w-0 justify-between border border-muted-foreground bg-[var(--glass-tint)] text-sidebar-foreground shadow-sm backdrop-blur-xl"
 									>
-										<Settings aria-hidden="true" className="size-4" />
-										Admin settings
-									</Link>
-									<DebugMenu />
+										<span className="truncate">
+											Library: {currentLibrary?.name || 'Choose library'}
+										</span>
+										<ChevronDown
+											aria-hidden="true"
+											className="size-4 shrink-0"
+										/>
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent
+									align="start"
+									className="max-w-[calc(100vw-2rem)]"
+								>
+									<DropdownMenuLabel>Library</DropdownMenuLabel>
+									<DropdownMenuRadioGroup
+										value={currentLibrary?.id || ''}
+										onValueChange={(id) => {
+											localStorage.setItem('currentLibraryId', id)
+											void navigate({
+												to: '/library/$library',
+												params: { library: id },
+											})
+										}}
+									>
+										{libraries.map((library) => (
+											<DropdownMenuRadioItem
+												key={library.id}
+												value={library.id}
+											>
+												<span className="truncate">{library.name}</span>
+											</DropdownMenuRadioItem>
+										))}
+									</DropdownMenuRadioGroup>
+								</DropdownMenuContent>
+							</DropdownMenu>
+							{currentLibrary && (
+								<div className="relative [&_label]:text-[0px] [&_input]:h-8 [&_input]:pl-8 [&_input]:text-sm [&_button]:h-8 [&_button]:px-2 [&_button]:text-xs">
+									<Search
+										aria-hidden="true"
+										className="pointer-events-none absolute top-2 left-2.5 size-4 text-muted-foreground"
+									/>
+									<SearchForm
+										key={currentLibrary.id}
+										library={currentLibrary.id}
+										q={
+											/^\/library\/[^/]+\/search\/?$/.test(pathname) &&
+											typeof query.q === 'string'
+												? query.q
+												: ''
+										}
+									/>
 								</div>
 							)}
-						</nav>
-					</SidebarContent>
-					<SidebarFooter className="border-t p-3">
-						<DropdownMenu>
-							<DropdownMenuTrigger asChild>
-								<Button
-									variant="ghost"
-									className="w-full min-w-0 justify-start text-sidebar-foreground"
-								>
-									<UserRound aria-hidden="true" className="size-4 shrink-0" />
-									<span className="truncate">{user.username} · Account</span>
-									<ChevronDown
-										aria-hidden="true"
-										className="ml-auto size-4 shrink-0"
-									/>
-								</Button>
-							</DropdownMenuTrigger>
-							<DropdownMenuContent
-								align="start"
-								side="top"
-								className="max-w-[calc(100vw-2rem)]"
+						</SidebarHeader>
+						<SidebarContent className="[scrollbar-width:none] [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0">
+							{currentLibrary && (
+								<LibraryNav
+									library={currentLibrary.id}
+									podcast={currentLibrary.mediaType === 'podcast'}
+									icons={{
+										Home: <House />,
+										'Latest episodes': <Headphones />,
+										'Add podcast': <Plus />,
+										Library: <Library />,
+										series: <ListMusic />,
+										authors: <Users />,
+										collections: <Folder />,
+										Narrators: <Mic />,
+										Playlists: <ListMusic />,
+										'Download queue': <Download />,
+										Statistics: <ChartNoAxesColumn />,
+									}}
+								/>
+							)}
+							<nav
+								aria-label="Settings and tools"
+								className="mt-auto space-y-1 px-3 py-2 text-sm"
 							>
-								<DropdownMenuItem asChild>
-									<Link to="/account">User settings</Link>
-								</DropdownMenuItem>
-								<DropdownMenuSeparator />
-								<DropdownMenuLabel>Theme</DropdownMenuLabel>
-								<DropdownMenuRadioGroup
-									aria-label="Theme"
-									value={theme}
-									onValueChange={setTheme}
-								>
-									<DropdownMenuRadioItem value="system">
-										System
-									</DropdownMenuRadioItem>
-									<DropdownMenuRadioItem value="light">
-										Light
-									</DropdownMenuRadioItem>
-									<DropdownMenuRadioItem value="dark">
-										Dark
-									</DropdownMenuRadioItem>
-								</DropdownMenuRadioGroup>
-								<DropdownMenuSeparator />
-								<DropdownMenuItem
-									onSelect={() =>
-										void logout().catch((error: unknown) =>
-											setError(
-												error instanceof Error
-													? error.message
-													: 'Logout failed',
-											),
-										)
-									}
-								>
-									Log out
-								</DropdownMenuItem>
-							</DropdownMenuContent>
-						</DropdownMenu>
-					</SidebarFooter>
-				</Sidebar>
-				<ServerActivityObserver />
-				<SidebarInset className="min-w-0 md:peer-data-[state=collapsed]:[--sidebar-width:0px]">
-					<header className="flex items-center gap-2 border-b px-4 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] md:contents">
-						<ShellSidebarTrigger />
-						<span className="truncate text-sm font-medium md:hidden">
-							{currentLibrary?.name || 'Audiobookshelf'}
-						</span>
-					</header>
-					<div
-						id="content"
-						className="w-full min-w-0 min-h-[60vh] px-6 py-8 pb-80 [--shelf-sidebar:0px] [scrollbar-width:none] md:[--shelf-sidebar:var(--sidebar-width)] [--shelf-gutter:1.5rem] sm:[--shelf-gutter:2rem] sm:px-8 [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0"
-					>
-						{error && (
-							<p role="alert" className="text-destructive">
-								{error}
-							</p>
-						)}
-						<LibraryNameContext.Provider value={currentLibrary?.name || ''}>
-							{routeError ? <RouteError {...routeError} /> : <Outlet />}
-							{addPodcast.addPodcast === 1 &&
-								currentLibrary?.mediaType === 'podcast' && (
-									<PodcastSearchModal libraryId={currentLibrary.id} />
+								{(admin || permissions?.upload) && (
+									<Link
+										to="/upload"
+										className="flex items-center gap-2 rounded-md px-3 py-2 hover:bg-accent"
+									>
+										<Plus aria-hidden="true" className="size-4" />
+										Upload
+									</Link>
 								)}
-						</LibraryNameContext.Provider>
-					</div>
-					<RouteDebugOverlay path={pathname} />
-					<Player />
-				</SidebarInset>
-			</SidebarProvider>
-			<footer className="px-5 pb-80 text-center text-xs text-muted-foreground">
-				Audiobookshelf · Modern frontend {frontendPackage.version} · Original
-				timeline · No offline media cache
-			</footer>
+								{admin && (
+									<div className="flex items-center gap-2">
+										<Link
+											to="/config"
+											activeOptions={{ exact: false }}
+											activeProps={{ className: 'bg-accent font-medium' }}
+											className="flex flex-1 items-center gap-2 rounded-md px-3 py-2 hover:bg-accent"
+										>
+											<Settings aria-hidden="true" className="size-4" />
+											Admin settings
+										</Link>
+									</div>
+								)}
+							</nav>
+						</SidebarContent>
+						<SidebarFooter className="border-t p-3">
+							<DropdownMenu>
+								<DropdownMenuTrigger asChild>
+									<Button
+										variant="ghost"
+										className="w-full min-w-0 justify-start text-sidebar-foreground"
+									>
+										<UserRound aria-hidden="true" className="size-4 shrink-0" />
+										<span className="truncate">{user.username} · Account</span>
+										<ChevronDown
+											aria-hidden="true"
+											className="ml-auto size-4 shrink-0"
+										/>
+									</Button>
+								</DropdownMenuTrigger>
+								<DropdownMenuContent
+									align="start"
+									side="top"
+									className="max-w-[calc(100vw-2rem)]"
+								>
+									<DropdownMenuItem asChild>
+										<Link to="/account">User settings</Link>
+									</DropdownMenuItem>
+									<DropdownMenuSeparator />
+									<DropdownMenuLabel>Theme</DropdownMenuLabel>
+									<DropdownMenuRadioGroup
+										aria-label="Theme"
+										value={theme}
+										onValueChange={setTheme}
+									>
+										<DropdownMenuRadioItem value="system">
+											System
+										</DropdownMenuRadioItem>
+										<DropdownMenuRadioItem value="light">
+											Light
+										</DropdownMenuRadioItem>
+										<DropdownMenuRadioItem value="dark">
+											Dark
+										</DropdownMenuRadioItem>
+									</DropdownMenuRadioGroup>
+									<DropdownMenuSeparator />
+									<DropdownMenuItem
+										onSelect={() =>
+											void logout().catch((error: unknown) =>
+												setError(
+													error instanceof Error
+														? error.message
+														: 'Logout failed',
+												),
+											)
+										}
+									>
+										Log out
+									</DropdownMenuItem>
+								</DropdownMenuContent>
+							</DropdownMenu>
+						</SidebarFooter>
+					</Sidebar>
+					<ServerActivityObserver />
+					<SidebarInset className="min-w-0 md:peer-data-[state=collapsed]:[--sidebar-width:0px]">
+						<header className="flex items-center gap-2 border-b px-4 py-2 pt-[max(0.5rem,env(safe-area-inset-top))] md:contents">
+							<ShellSidebarTrigger />
+							<DebugToggle />
+							<span className="truncate text-sm font-medium md:hidden">
+								{currentLibrary?.name || 'Audiobookshelf'}
+							</span>
+						</header>
+						<div
+							id="content"
+							className="w-full min-w-0 min-h-[60vh] px-6 py-8 pb-80 [--shelf-sidebar:0px] [scrollbar-width:none] md:[--shelf-sidebar:var(--sidebar-width)] [--shelf-gutter:1.5rem] sm:[--shelf-gutter:2rem] sm:px-8 [&::-webkit-scrollbar]:w-0 [&::-webkit-scrollbar]:h-0"
+						>
+							{error && (
+								<p role="alert" className="text-destructive">
+									{error}
+								</p>
+							)}
+							<LibraryNameContext.Provider value={currentLibrary?.name || ''}>
+								{routeError ? <RouteError {...routeError} /> : <Outlet />}
+								{addPodcast.addPodcast === 1 &&
+									currentLibrary?.mediaType === 'podcast' && (
+										<PodcastSearchModal libraryId={currentLibrary.id} />
+									)}
+							</LibraryNameContext.Provider>
+						</div>
+						<Player />
+					</SidebarInset>
+				</SidebarProvider>
+				<footer className="px-5 pb-80 text-center text-xs text-muted-foreground">
+					Audiobookshelf · Modern frontend {frontendPackage.version} · Original
+					timeline · No offline media cache
+				</footer>
+			</RootDebug>
 		</>
 	)
 }

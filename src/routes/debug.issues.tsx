@@ -1,6 +1,6 @@
 import { createFileRoute } from '@tanstack/react-router'
-import { DebugIssues } from '../features/debug'
+import { DebugPage } from 'debug-overlay/client'
 
 export const Route = createFileRoute('/debug/issues')({
-	component: DebugIssues,
+	component: DebugPage,
 })

@@ -1,18 +1,17 @@
 // Sidecar contract fixture for proxy E2E; isolated from the stock ABS mock.
 import fixtures from '../contract/fixtures.json' with { type: 'json' }
 import { items } from './data'
+import { fixtureUserForToken } from './fixture-api'
 
 const state = {
 	unavailable: false,
 	unauthorized: false,
 	feedComplete: false,
 }
-const feedUsers = new Set([
-	'fixture-access',
-	'fixture-admin-access',
-	'fixture-root-access',
-	'fixture-guest-access',
-])
+const isAdminToken = (token: string | undefined) => {
+	const user = fixtureUserForToken(token)
+	return user !== undefined && ['admin', 'root'].includes(user.type)
+}
 const analysisFixture = fixtures.analysis.episodes['episode-id']
 const feedEpisode = {
 	id: 'feed-only-episode',
@@ -57,7 +56,7 @@ export async function handleSidecarRequest(request: Request) {
 	const token = request.headers
 		.get('authorization')
 		?.match(/^Bearer ([^\s]+)$/)?.[1]
-	const user = feedUsers.has(token || '')
+	const user = fixtureUserForToken(token) !== undefined
 	if (state.unauthorized || !user)
 		return Response.json({ error: 'unauthorized' }, { status: 401 })
 
@@ -65,9 +64,7 @@ export async function handleSidecarRequest(request: Request) {
 	if (path === '/api/podcasts/podcast-1/ad-analysis') {
 		if (request.method === 'GET') return Response.json(fixtures.consent)
 		if (request.method === 'POST') {
-			if (
-				!['fixture-admin-access', 'fixture-root-access'].includes(token || '')
-			)
+			if (!isAdminToken(token))
 				return Response.json({ error: 'forbidden' }, { status: 403 })
 			const body = await request.json().catch(() => null)
 			if (typeof body?.enabled !== 'boolean')
@@ -76,7 +73,7 @@ export async function handleSidecarRequest(request: Request) {
 		}
 	}
 	if (path === '/api/debug/auth') {
-		return ['fixture-admin-access', 'fixture-root-access'].includes(token || '')
+		return isAdminToken(token)
 			? Response.json({ ok: true })
 			: Response.json({ error: 'forbidden' }, { status: 403 })
 	}
@@ -111,7 +108,7 @@ export async function handleSidecarRequest(request: Request) {
 	const enqueue =
 		/^\/api\/podcasts\/([^/]+)\/episode\/([^/]+)\/ad-analysis$/.exec(path)
 	if (enqueue && request.method === 'POST') {
-		if (!['fixture-admin-access', 'fixture-root-access'].includes(token || ''))
+		if (!isAdminToken(token))
 			return Response.json({ error: 'forbidden' }, { status: 403 })
 		const body = await request.json().catch(() => null)
 		if (!body || typeof body !== 'object' || Object.keys(body).length)
@@ -127,9 +124,7 @@ export async function handleSidecarRequest(request: Request) {
 			return Response.json({ error: 'not_found' }, { status: 404 })
 		if (request.method === 'GET') return Response.json(fixtures.consent)
 		if (request.method === 'POST') {
-			if (
-				!['fixture-admin-access', 'fixture-root-access'].includes(token || '')
-			)
+			if (!isAdminToken(token))
 				return Response.json({ error: 'forbidden' }, { status: 403 })
 			const body = await request.json().catch(() => null)
 			if (typeof body?.enabled !== 'boolean')
