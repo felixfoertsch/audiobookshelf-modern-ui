@@ -40,7 +40,8 @@ jobs:
             -t modern-ui-e2e:frontend .
           docker buildx build --builder frontend --platform linux/amd64 --load --target e2e-abs-mock -t modern-ui-e2e:abs .
           docker buildx build --builder frontend --platform linux/amd64 --load --target e2e-psb-mock -t modern-ui-e2e:psb .
-          docker buildx build --builder frontend --platform linux/amd64 --load --target e2e-runner -t modern-ui-e2e:runner .
+          docker pull mcr.microsoft.com/playwright:v1.64.1-noble
+          docker pull oven/bun:1.4.3
       - name: Run full Playwright suite against built proxy image
         run: e2e/run-container-suite.sh
       - name: Publish image

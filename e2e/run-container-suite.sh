@@ -6,9 +6,13 @@ network=modern-ui-e2e-$suffix
 frontend=modern-ui-e2e-frontend-$suffix
 abs=modern-ui-e2e-abs-$suffix
 psb=modern-ui-e2e-psb-$suffix
+runner=modern-ui-e2e-runner-$suffix
+bun=modern-ui-e2e-bun-$suffix
+bun_file=$(mktemp)
 cleanup() {
-	docker rm -f "$frontend" "$abs" "$psb" >/dev/null 2>&1 || true
+	docker rm -f "$frontend" "$abs" "$psb" "$runner" "$bun" >/dev/null 2>&1 || true
 	docker network rm "$network" >/dev/null 2>&1 || true
+	rm -f "$bun_file"
 }
 cleanup
 trap cleanup EXIT
@@ -24,6 +28,13 @@ for attempt in {1..30}; do
 	sleep 1
 done
 docker exec "$frontend" wget -q -O /dev/null http://127.0.0.1:8080/health
-docker run --rm --network "container:$frontend" -e BUILT_BASE_URL=http://127.0.0.1:8080 \
-	-e ABS_MOCK_CONTROL_URL=http://audiobookshelf:80 \
-	modern-ui-e2e:runner
+docker create --name "$bun" oven/bun:1.4.3 >/dev/null
+docker create --name "$runner" --network "container:$frontend" -w /app -e CI=1 \
+	-e BUILT_BASE_URL=http://127.0.0.1:8080 -e ABS_MOCK_CONTROL_URL=http://audiobookshelf:80 \
+	mcr.microsoft.com/playwright:v1.64.1-noble \
+	bash -c 'bun install --frozen-lockfile && bun x playwright test' >/dev/null
+docker cp "$bun:/usr/local/bin/bun" "$bun_file"
+docker cp "$bun_file" "$runner:/usr/local/bin/bun"
+tar --exclude=.git --exclude=node_modules --exclude=dist --exclude=test-results -cf - . | docker cp - "$runner:/app"
+docker start -a "$runner"
+test "$(docker inspect -f '{{.State.ExitCode}}' "$runner")" -eq 0
