@@ -14,7 +14,19 @@ permissions:
   packages: write
 
 jobs:
+  check:
+    if: github.repository == 'felixfoertsch/audiobookshelf-modern-ui' && github.ref == 'refs/heads/main'
+    runs-on: linux-builder
+    container: gitea/runner-images@sha256:0e62e56b382ebf485bff1e51a05cbe27c708545a2e91425467fd31eb3e249521
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - run: |
+          docker buildx create --name frontend --driver remote docker-container://linux-builder-buildkit --use
+          docker buildx build --builder frontend --platform linux/amd64 --target check .
   publish:
+    needs: check
     if: github.repository == 'felixfoertsch/audiobookshelf-modern-ui' && github.ref == 'refs/heads/main'
     runs-on: linux-builder
     container: gitea/runner-images@sha256:0e62e56b382ebf485bff1e51a05cbe27c708545a2e91425467fd31eb3e249521
@@ -33,7 +45,6 @@ jobs:
         run: |
           set -euo pipefail
           docker buildx create --name frontend --driver remote docker-container://linux-builder-buildkit --use
-          docker buildx build --builder frontend --platform linux/amd64 --target check .
           docker buildx build --builder frontend --platform linux/amd64 --load --target runtime \
             --label org.opencontainers.image.source=https://git.felixfoertsch.de/${{ github.repository }} \
             --label org.opencontainers.image.revision=${{ github.sha }} \
