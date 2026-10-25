@@ -13,7 +13,7 @@ RUN apk add --no-cache nodejs && bun run typecheck && bun run lint && bun test s
 
 FROM nginxinc/nginx-unprivileged:1.27.5-alpine3.21@sha256:65e3e85dbaed8ba248841d9d58a899b6197106c23cb0ff1a132b7bfe0547e4c0 AS runtime
 USER root
-RUN apk add --no-cache --upgrade ca-certificates && update-ca-certificates
+RUN apk add --no-cache --upgrade ca-certificates libgcc libstdc++ && update-ca-certificates
 WORKDIR /app
 COPY --from=debug-deps /app/node_modules ./node_modules
 COPY --from=build /app/package.json ./package.json

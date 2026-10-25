@@ -136,6 +136,7 @@ for (const prefix of [''])
 						.evaluate((node) => node.getBoundingClientRect().left),
 				)
 				.toBeGreaterThanOrEqual(before.content)
+			await page.unrouteAll({ behavior: 'wait' })
 			expect((await measure()).document).toBeLessThanOrEqual(width)
 			const lastLink = scroller
 				.locator('article')
