@@ -9,6 +9,9 @@ for (const prefix of ['']) {
 		await page.getByLabel('Username', { exact: true }).fill('admin')
 		await page.getByLabel('Password', { exact: true }).fill('password')
 		await page.getByRole('button', { name: 'Sign in', exact: true }).click()
+		await expect(
+			page.getByRole('link', { name: 'Admin settings', exact: true }),
+		).toBeVisible()
 		for (const route of ['/config', '/config/users', '/config/libraries']) {
 			await page.goto(`${prefix}${route}`)
 			const link = page.getByRole('link', {
